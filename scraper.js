@@ -3,22 +3,26 @@ const puppeteer = require('puppeteer-core');
 
 async function scrapeRentData(lat, lng, radius) {
   const keyword = 'commercial space near ' + lat + ',' + lng;
+  console.log("🔍 Launching headless Chrome with puppeteer-core...");
 
   const browser = await puppeteer.launch({
     headless: true,
-    executablePath: '/usr/bin/chromium-browser',
+    executablePath: '/usr/bin/google-chrome-stable',
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
 
+  console.log("✅ Browser launched, navigating...");
   const page = await browser.newPage();
   await page.goto('https://www.commercialguru.com.sg/property-for-rent', { waitUntil: 'networkidle2' });
 
+  console.log("📨 Typing search query...");
   await page.type('input[name="query"]', keyword);
   await Promise.all([
     page.keyboard.press('Enter'),
     page.waitForNavigation({ waitUntil: 'networkidle2' }),
   ]);
 
+  console.log("🔎 Scraping listings...");
   const listings = await page.evaluate(() => {
     const cards = Array.from(document.querySelectorAll('.listing-card'));
     return cards.slice(0, 5).map(card => {
@@ -37,6 +41,7 @@ async function scrapeRentData(lat, lng, radius) {
 
   await browser.close();
 
+  console.log("📦 Scrape complete, processing results...");
   const validListings = listings.filter(l => l.rate !== null);
   const avgRate = validListings.reduce((acc, l) => acc + l.rate, 0) / validListings.length || 0;
 
