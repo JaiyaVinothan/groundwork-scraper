@@ -3,11 +3,10 @@ const { chromium } = require('playwright');
 
 async function scrapeRentData(lat, lng, radius) {
   const keyword = 'commercial space near ' + lat + ',' + lng;
-  console.log("🚀 Launching Chromium from hardcoded path...");
+  console.log("🚀 Launching Chromium (default path)...");
 
   const browser = await chromium.launch({
     headless: true,
-    executablePath: '/opt/render/.cache/ms-playwright/chromium-1169/chrome-linux/chrome',
     args: ['--no-sandbox']
   });
 
