@@ -1,55 +1,62 @@
 
-const puppeteer = require('puppeteer-core');
+const { chromium } = require('playwright');
 
 async function scrapeRentData(lat, lng, radius) {
   const keyword = 'commercial space near ' + lat + ',' + lng;
-  console.log("🔍 Launching headless Chrome with puppeteer-core...");
+  console.log("🚀 Launching Playwright...");
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath: '/usr/bin/google-chrome-stable',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-
-  console.log("✅ Browser launched, navigating...");
+  const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
-  await page.goto('https://www.commercialguru.com.sg/property-for-rent', { waitUntil: 'networkidle2' });
 
-  console.log("📨 Typing search query...");
-  await page.type('input[name="query"]', keyword);
-  await Promise.all([
-    page.keyboard.press('Enter'),
-    page.waitForNavigation({ waitUntil: 'networkidle2' }),
-  ]);
+  try {
+    console.log("🌐 Navigating to CommercialGuru...");
+    await page.goto('https://www.commercialguru.com.sg/property-for-rent', { waitUntil: 'networkidle' });
 
-  console.log("🔎 Scraping listings...");
-  const listings = await page.evaluate(() => {
-    const cards = Array.from(document.querySelectorAll('.listing-card'));
-    return cards.slice(0, 5).map(card => {
-      const name = card.querySelector('h3 a')?.innerText || '';
-      const info = card.querySelector('.listing-details')?.innerText || '';
-      const rentMatch = info.match(/\$(\d{1,3}(,\d{3})*(\.\d{2})?)/);
-      const sqftMatch = info.match(/(\d{3,4})\s*sqft/i);
+    console.log("⌨️ Typing query...");
+    await page.fill('input[name="query"]', keyword);
+    await Promise.all([
+      page.keyboard.press('Enter'),
+      page.waitForNavigation({ waitUntil: 'networkidle' }),
+    ]);
 
-      const rent = rentMatch ? parseFloat(rentMatch[1].replace(/[^\d.]/g, '')) : null;
-      const sqft = sqftMatch ? parseInt(sqftMatch[1]) : null;
-      const rate = rent && sqft ? +(rent / sqft).toFixed(2) : null;
+    await page.waitForTimeout(2000);
 
-      return { name, rent, sqft, rate };
+    console.log("📄 Capturing HTML...");
+    const htmlContent = await page.content();
+    console.log("📄 Snapshot:", htmlContent.slice(0, 1500));
+
+    const listings = await page.evaluate(() => {
+      const cards = Array.from(document.querySelectorAll('.listing-card'));
+      return cards.slice(0, 5).map(card => {
+        const name = card.querySelector('h3 a')?.innerText || '';
+        const info = card.querySelector('.listing-details')?.innerText || '';
+        const rentMatch = info.match(/\$(\d{1,3}(,\d{3})*(\.\d{2})?)/);
+        const sqftMatch = info.match(/(\d{3,4})\s*sqft/i);
+
+        const rent = rentMatch ? parseFloat(rentMatch[1].replace(/[^\d.]/g, '')) : null;
+        const sqft = sqftMatch ? parseInt(sqftMatch[1]) : null;
+        const rate = rent && sqft ? +(rent / sqft).toFixed(2) : null;
+
+        return { name, rent, sqft, rate };
+      });
     });
-  });
 
-  await browser.close();
+    await browser.close();
 
-  console.log("📦 Scrape complete, processing results...");
-  const validListings = listings.filter(l => l.rate !== null);
-  const avgRate = validListings.reduce((acc, l) => acc + l.rate, 0) / validListings.length || 0;
+    const validListings = listings.filter(l => l.rate !== null);
+    const avgRate = validListings.reduce((acc, l) => acc + l.rate, 0) / validListings.length || 0;
 
-  return {
-    area: keyword,
-    average_rent_per_sqft: +avgRate.toFixed(2),
-    sample_listings: validListings,
-  };
+    return {
+      area: keyword,
+      average_rent_per_sqft: +avgRate.toFixed(2),
+      sample_listings: validListings,
+    };
+
+  } catch (err) {
+    await browser.close();
+    console.error("❌ Scrape failed:", err.message);
+    throw new Error("Scraping error");
+  }
 }
 
 module.exports = { scrapeRentData };

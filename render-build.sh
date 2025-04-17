@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
-echo "⚙️ Skipping Chromium download — using puppeteer-core"
-export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+echo "📦 Installing dependencies (Playwright)"
 npm install
+npx playwright install --with-deps
