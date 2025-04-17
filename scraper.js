@@ -4,9 +4,13 @@ const puppeteer = require('puppeteer');
 async function scrapeRentData(lat, lng, radius) {
   const keyword = 'commercial space near ' + lat + ',' + lng;
 
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
+  const browser = await puppeteer.launch({
+    headless: true,
+    executablePath: '/usr/bin/chromium-browser',
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
 
+  const page = await browser.newPage();
   await page.goto('https://www.commercialguru.com.sg/property-for-rent', { waitUntil: 'networkidle2' });
 
   await page.type('input[name="query"]', keyword);
