@@ -1,14 +1,12 @@
 
 const { chromium } = require('playwright');
-const { registry } = require('playwright/lib/utils/registry');
 
 async function scrapeRentData(lat, lng, radius) {
   const keyword = 'commercial space near ' + lat + ',' + lng;
-  console.log("🚀 Launching Chromium using registry path...");
+  console.log("🚀 Launching Chromium (Playwright default)...");
 
   const browser = await chromium.launch({
     headless: true,
-    executablePath: registry.findExecutable('chromium'),
     args: ['--no-sandbox']
   });
 
